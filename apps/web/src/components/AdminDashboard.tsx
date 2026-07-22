@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import type { Movie, User } from "../../../../packages/shared-types/src/index";
 import { api } from "../services/api";
+import { alertDialog, confirmDialog, promptDialog } from "./AppDialog";
 
 type Module =
   | "overview"
@@ -486,16 +487,19 @@ export function AdminDashboard({onBack,theme,onToggleTheme,currentUser}:{onBack:
     }
   }
   async function archive(movie: AdminMovie) {
-    if (!confirm(`Chuyển “${movie.title}” vào lưu trữ?`)) return;
+    if (!await confirmDialog({title:"Lưu trữ nội dung?",message:`“${movie.title}” sẽ không còn xuất hiện với người xem.`,confirmLabel:"Chuyển vào lưu trữ",tone:"danger"})) return;
     await api.archiveMovie(movie.id);
     await loadContent();
   }
   async function toggleUser(user: AdminUser) {
     const next = user.status === "active" ? "suspended" : "active";
     if (
-      !confirm(
-        `${next === "suspended" ? "Khóa" : "Mở khóa"} tài khoản ${user.email}?`,
-      )
+      !await confirmDialog({
+        title: next === "suspended" ? "Khóa tài khoản?" : "Mở khóa tài khoản?",
+        message: `${user.email} ${next === "suspended" ? "sẽ không thể tiếp tục đăng nhập." : "sẽ được phép đăng nhập trở lại."}`,
+        confirmLabel: next === "suspended" ? "Khóa tài khoản" : "Mở khóa",
+        tone: next === "suspended" ? "danger" : "success",
+      })
     )
       return;
     try {
@@ -538,7 +542,7 @@ export function AdminDashboard({onBack,theme,onToggleTheme,currentUser}:{onBack:
     await loadGenres();
   }
   async function deleteGenre(genre: AdminGenre) {
-    if (!confirm(`Xóa thể loại “${genre.name}”?`)) return;
+    if (!await confirmDialog({title:"Xóa thể loại?",message:`Thể loại “${genre.name}” sẽ bị xóa khỏi hệ thống.`,confirmLabel:"Xóa thể loại",tone:"danger"})) return;
     try {
       await api.deleteAdminGenre(genre.id);
       await loadGenres();
@@ -573,7 +577,7 @@ export function AdminDashboard({onBack,theme,onToggleTheme,currentUser}:{onBack:
     }
   }
   async function removeReview(id: string) {
-    if (!confirm("Xóa vĩnh viễn đánh giá này?")) return;
+    if (!await confirmDialog({title:"Xóa vĩnh viễn đánh giá?",message:"Hành động này không thể hoàn tác và đánh giá sẽ biến mất khỏi hệ thống.",confirmLabel:"Xóa đánh giá",tone:"danger"})) return;
     try {
       await api.deleteAdminReview(id);
       await loadReviews();
@@ -590,7 +594,7 @@ export function AdminDashboard({onBack,theme,onToggleTheme,currentUser}:{onBack:
       setError(e instanceof Error ? e.message : "Không thể xử lý hàng loạt");
     }
   }
-  async function createPasswordReset(user:AdminUser){try{const result=await api.createAdminPasswordReset(user.id);await navigator.clipboard.writeText(result.resetToken);window.alert(`Đã tạo và sao chép mã đặt lại cho ${user.email}.\n\nMã có hiệu lực ${result.expiresInMinutes} phút. Chỉ gửi mã sau khi đã xác minh người dùng.`)}catch(e){setError(e instanceof Error?e.message:"Không thể tạo mã đặt lại")}}
+  async function createPasswordReset(user:AdminUser){try{const result=await api.createAdminPasswordReset(user.id);await navigator.clipboard.writeText(result.resetToken);await alertDialog({title:"Đã sao chép mã đặt lại",message:`Mã dành cho ${user.email} có hiệu lực ${result.expiresInMinutes} phút. Chỉ gửi mã sau khi đã xác minh người dùng.`,tone:"success"})}catch(e){setError(e instanceof Error?e.message:"Không thể tạo mã đặt lại")}}
 
   return (
     <main className="admin-workspace">
@@ -1643,7 +1647,7 @@ function SettingsPanel({value,savedValue,updatedAt,setValue,reset,save}:{value:S
   const dirty=Boolean(savedValue&&JSON.stringify(value)!==JSON.stringify(savedValue));
   const submit=async(e:FormEvent)=>{
     e.preventDefault();
-    if(value.maintenance_mode&&!savedValue?.maintenance_mode&&!confirm("Bật chế độ bảo trì? Người dùng có thể bị gián đoạn truy cập."))return;
+    if(value.maintenance_mode&&!savedValue?.maintenance_mode&&!await confirmDialog({title:"Bật chế độ bảo trì?",message:"Người dùng có thể bị gián đoạn truy cập cho đến khi chế độ này được tắt.",confirmLabel:"Bật bảo trì",tone:"danger"}))return;
     setSaving(true);setMessage("");
     try{await save();setMessage("Đã lưu cấu hình thành công.")}
     catch(error){setMessage(error instanceof Error?error.message:"Không thể lưu cấu hình.")}
@@ -1824,13 +1828,13 @@ function BillingPanel({
   const openPlan=(plan:AdminPlan)=>{setEditingPlan(plan);setPlanDraft({name:plan.name,price:plan.price,billingInterval:plan.billingInterval??"month",maxProfiles:plan.maxProfiles,maxConcurrentStreams:plan.maxConcurrentStreams??1,maxQuality:plan.maxQuality,hasAds:plan.hasAds??false,allowDownload:plan.allowDownload,downloadLimit:plan.downloadLimit??0,features:plan.features,isActive:plan.isActive});setPlanError("");setShowPlanForm(true)};
   const openNewPlan=()=>{setEditingPlan(null);setPlanDraft({name:"",price:99000,billingInterval:"month",maxProfiles:2,maxConcurrentStreams:1,maxQuality:"1080p",hasAds:false,allowDownload:false,downloadLimit:0,features:["Không quảng cáo"],isActive:false});setPlanError("");setShowPlanForm(true)};
   const openInvoice=async(id:string)=>{setInvoiceLoading(true);setInvoiceError("");try{setSelectedInvoice(await api.adminInvoice(id) as AdminInvoiceDetail)}catch(error){setInvoiceError(error instanceof Error?error.message:"Không tải được hóa đơn")}finally{setInvoiceLoading(false)}};
-  const changeInvoiceStatus=async(next:"pending"|"success"|"failed"|"refunded")=>{if(!selectedInvoice)return;let reason="";if(next==="failed"||next==="refunded"){const input=prompt(next==="refunded"?"Nhập lý do hoàn tiền":"Nhập lý do đánh dấu thất bại");if(input===null)return;reason=input.trim();if(reason.length<3)return alert("Lý do phải có ít nhất 3 ký tự.")}const labels={pending:"đưa giao dịch về trạng thái chờ",success:"xác nhận giao dịch thành công",failed:"đánh dấu giao dịch thất bại",refunded:"hoàn tiền giao dịch"};if(!confirm(`Bạn chắc chắn muốn ${labels[next]}?`))return;setInvoiceActionBusy(true);setInvoiceError("");try{await api.updateAdminInvoiceStatus(selectedInvoice.id,next,reason);await Promise.all([openInvoice(selectedInvoice.id),reload()])}catch(error){setInvoiceError(error instanceof Error?error.message:"Không cập nhật được giao dịch")}finally{setInvoiceActionBusy(false)}};
+  const changeInvoiceStatus=async(next:"pending"|"success"|"failed"|"refunded")=>{if(!selectedInvoice)return;let reason="";if(next==="failed"||next==="refunded"){const input=await promptDialog({title:next==="refunded"?"Lý do hoàn tiền":"Lý do giao dịch thất bại",message:"Ghi chú này sẽ được lưu trong lịch sử xử lý giao dịch.",placeholder:"Nhập ít nhất 3 ký tự",confirmLabel:"Tiếp tục"});if(input===null)return;reason=input.trim();if(reason.length<3){await alertDialog({title:"Lý do chưa hợp lệ",message:"Vui lòng nhập ít nhất 3 ký tự.",tone:"danger"});return}}const labels={pending:"đưa giao dịch về trạng thái chờ",success:"xác nhận giao dịch thành công",failed:"đánh dấu giao dịch thất bại",refunded:"hoàn tiền giao dịch"};if(!await confirmDialog({title:"Xác nhận cập nhật giao dịch",message:`Bạn đang ${labels[next]}. Thao tác này sẽ được ghi vào lịch sử quản trị.`,confirmLabel:"Xác nhận",tone:next==="success"?"success":"danger"}))return;setInvoiceActionBusy(true);setInvoiceError("");try{await api.updateAdminInvoiceStatus(selectedInvoice.id,next,reason);await Promise.all([openInvoice(selectedInvoice.id),reload()])}catch(error){setInvoiceError(error instanceof Error?error.message:"Không cập nhật được giao dịch")}finally{setInvoiceActionBusy(false)}};
   const submitPlan=async(e:FormEvent)=>{e.preventDefault();setPlanSaving(true);setPlanError("");try{await save(editingPlan?.id??"",{...planDraft,features:planDraft.features.map(item=>item.trim()).filter(Boolean)});setShowPlanForm(false);setEditingPlan(null)}catch(error){setPlanError(error instanceof Error?error.message:"Không thể lưu gói") }finally{setPlanSaving(false)}};
   const editPrice = async (plan: AdminPlan) => {
-    const raw = prompt(`Giá mới cho ${plan.name} (VND)`, String(plan.price));
+    const raw = await promptDialog({title:`Cập nhật giá ${plan.name}`,message:"Nhập mức giá mới bằng VND. Giá 0 tương ứng với gói miễn phí.",defaultValue:String(plan.price),confirmLabel:"Cập nhật giá"});
     if (raw === null) return;
     const price = Number(raw);
-    if (!Number.isFinite(price) || price < 0) return alert("Giá không hợp lệ");
+    if (!Number.isFinite(price) || price < 0) { await alertDialog({title:"Giá không hợp lệ",message:"Giá phải là một số lớn hơn hoặc bằng 0.",tone:"danger"}); return; }
     await save(plan.id, { price });
   };
   return (

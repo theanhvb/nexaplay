@@ -5,6 +5,7 @@ import type {
   ReviewBundle,
 } from "../../../../packages/shared-types/src/index";
 import { api } from "../services/api";
+import { alertDialog, promptDialog } from "./AppDialog";
 
 type Props = {
   movie: Movie;
@@ -49,13 +50,13 @@ export function DetailPanel({
   }
   async function reportReview(id: string) {
     if (!isUserLoggedIn) return;
-    const detail = prompt("Mô tả ngắn lý do báo cáo (spam, xúc phạm, tiết lộ nội dung...):");
+    const detail = await promptDialog({title:"Báo cáo đánh giá",message:"Mô tả ngắn vấn đề để quản trị viên kiểm tra chính xác hơn.",placeholder:"Ví dụ: spam, xúc phạm, tiết lộ nội dung...",confirmLabel:"Gửi báo cáo"});
     if (detail === null) return;
     try {
       await api.reportReview(id, "other", detail.trim() || undefined);
-      alert("Đã gửi báo cáo. Quản trị viên sẽ kiểm tra nội dung này.");
+      await alertDialog({title:"Đã gửi báo cáo",message:"Quản trị viên sẽ kiểm tra nội dung này trong thời gian sớm nhất.",tone:"success"});
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Không gửi được báo cáo");
+      await alertDialog({title:"Không gửi được báo cáo",message:error instanceof Error ? error.message : "Vui lòng thử lại sau.",tone:"danger"});
     }
   }
   return (
