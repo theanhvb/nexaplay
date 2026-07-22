@@ -15,5 +15,6 @@ COPY packages/service-kit/package.json packages/service-kit/package.json
 COPY packages/database/package.json packages/database/package.json
 RUN npm ci --include=dev
 COPY . .
+RUN CATALOG_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/catalog_db npm run generate:catalog --workspace packages/database
 ENV NODE_ENV=production
 CMD npm run start --workspace $WORKSPACE

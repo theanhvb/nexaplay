@@ -68,10 +68,30 @@ services:
     <<: *backend
     environment: { <<: *backend-env, WORKSPACE: "@movie-platform/identity-service", PORT: 4101 }
 
+  catalog-migrate:
+    image: nexaplay-backend:latest
+    restart: "no"
+    mem_limit: 144m
+    cpus: 0.25
+    pids_limit: 100
+    logging: *default-logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *backend-env
+      CATALOG_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/catalog_db
+    command: npm run migrate:catalog --workspace packages/database
+
   catalog:
     <<: *backend
     mem_limit: 176m
     environment: { <<: *backend-env, WORKSPACE: "@movie-platform/catalog-service", PORT: 4102 }
+    depends_on:
+      postgres:
+        condition: service_healthy
+      catalog-migrate:
+        condition: service_completed_successfully
 
   engagement:
     <<: *backend
