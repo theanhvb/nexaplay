@@ -25,13 +25,6 @@ x-backend: &backend
     DB_POOL_SIZE: 3
     JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
     INTERNAL_SECRET: ${INTERNAL_SECRET:?Set INTERNAL_SECRET in .env}
-    APP_URL: ${APP_URL:-http://localhost:8080}
-    SMTP_HOST: ${SMTP_HOST:-}
-    SMTP_PORT: ${SMTP_PORT:-465}
-    SMTP_SECURE: ${SMTP_SECURE:-true}
-    SMTP_USER: ${SMTP_USER:-}
-    SMTP_PASS: ${SMTP_PASS:-}
-    MAIL_FROM: ${MAIL_FROM:-}
 
 services:
   postgres:
