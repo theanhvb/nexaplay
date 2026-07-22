@@ -5,15 +5,17 @@ type Props = {
   title: string;
   movies: Movie[];
   onOpen: (movie: Movie) => void;
+  onViewAll?: () => void;
 };
 
-export function MovieRow({ title, movies, onOpen }: Props) {
+export function MovieRow({ title, movies, onOpen, onViewAll }: Props) {
   if (!movies.length) return null;
 
   return (
     <section className="movie-row">
       <div className="section-heading">
         <h2>{title}</h2>
+        {onViewAll && <button type="button" className="view-all-button" onClick={onViewAll}>Xem tất cả <span>→</span></button>}
       </div>
       <div className="movie-strip">
         {movies.map((movie) => (

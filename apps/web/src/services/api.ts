@@ -48,11 +48,21 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   return payload.data;
 }
 
+async function publicPage(path:string) {
+  const response=await fetch(`${API_URL}${path}`,{headers:{"Content-Type":"application/json"}});
+  const payload=await response.json() as ApiResponse<Movie[]>;
+  if(!response.ok||!payload.success)throw new Error(payload.error?.message||"Không thể tải danh sách phim.");
+  const meta=(payload.meta??{}) as Record<string,unknown>;
+  const page=Number(meta.currentPage??meta.page??1),limit=Number(meta.totalItemsPerPage??meta.limit??24),total=Number(meta.totalItems??meta.total??payload.data.length),totalPages=Number(meta.totalPages??Math.max(1,Math.ceil(total/limit)));
+  return {items:payload.data,pagination:{page,limit,total,totalPages}};
+}
+
 export const api = {
   ophimHome() { return request<Movie[]>("/v1/ophim/home"); },
   ophimHot() { return request<Movie[]>("/v1/ophim/hot"); },
   ophimAnimeHot() { return request<Movie[]>("/v1/ophim/anime-hot"); },
   ophimMovies(params = "") { return request<Movie[]>(`/v1/ophim/movies${params}`); },
+  ophimMoviesPage(params = "") { return publicPage(`/v1/ophim/movies${params}`); },
   ophimMovie(slug: string) { return request<Movie>(`/v1/ophim/movies/${encodeURIComponent(slug)}`); },
   ophimGenres() { return request<Genre[]>("/v1/ophim/genres"); },
   ophimSearch(q: string) { return request<Movie[]>(`/v1/ophim/search?q=${encodeURIComponent(q)}`); },

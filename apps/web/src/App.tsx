@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Bell, ChevronDown, Clapperboard, Film, LayoutDashboard, LogIn, Moon, Play, RefreshCw, Search, Sparkles, Sun, Tv, UserCircle } from "lucide-react";
+import { ArrowLeft, Bell, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, Film, LayoutDashboard, LogIn, Moon, Play, RefreshCw, Search, Sparkles, Sun, Tv, UserCircle } from "lucide-react";
 import { Genre, Movie, User } from "../../../packages/shared-types/src/index";
 import { DetailPanel } from "./components/DetailPanel";
 import { LoginModal } from "./components/LoginModal";
@@ -17,6 +17,15 @@ type AdminStats = {
   topContent: Array<{ contentId: string; title: string; views: number; completionRate: number }>;
   trend: Array<{ stat_date: string; new_users: number; total_views: number; total_revenue: number }>;
 };
+type CollectionSource = {kind:"remote";params:string}|{kind:"local";items:Movie[]};
+type CatalogPagination = {page:number;limit:number;total:number;totalPages:number};
+
+function HeroTrailer({url,title}:{url:string;title:string}){
+  const youtubeId=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^?&/]+)/i)?.[1];
+  if(youtubeId)return <iframe className="hero__trailer" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&playsinline=1&rel=0&modestbranding=1`} title={`Trailer ${title}`} allow="autoplay; encrypted-media" tabIndex={-1}/>;
+  if(/\.(mp4|webm|m3u8)(?:\?|$)/i.test(url))return <video className="hero__trailer" src={url} autoPlay muted loop playsInline preload="metadata" aria-label={`Trailer ${title}`}/>;
+  return null;
+}
 
 export function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -41,6 +50,8 @@ export function App() {
   const [error, setError] = useState("");
   const [catalogBusy, setCatalogBusy] = useState(false);
   const [catalogMode, setCatalogMode] = useState<"home" | "filtered">("home");
+  const [collectionSource,setCollectionSource]=useState<CollectionSource|null>(null);
+  const [catalogPagination,setCatalogPagination]=useState<CatalogPagination>({page:1,limit:24,total:0,totalPages:1});
   const [openNav, setOpenNav] = useState<"movies" | "genres" | null>(null);
   const [theme,setTheme]=useState<"dark"|"light">(()=>{const saved=localStorage.getItem("nexaplay-theme");const initial=saved==="dark"||saved==="light"?saved:window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.theme=initial;document.documentElement.style.colorScheme=initial;return initial});
 
@@ -119,34 +130,24 @@ export function App() {
 
   async function browseGenre(slug: string) {
     const genre = genres.find((item) => item.slug === slug);
-    setCatalogBusy(true); setError("");
-    try {
-      const results = await api.ophimMovies(`?genre=${encodeURIComponent(slug)}&page=1`);
-      setMovies(results);
-      setCatalogTitle(genre ? `Thể loại ${genre.name}` : "Khám phá phim");
-      setCatalogMode("filtered");
-      setQuery("");
-      setOpenNav(null);
-      window.location.hash = "home";
-      window.setTimeout(() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" }), 0);
-    } catch { setError("Không tải được thể loại này. Vui lòng thử lại."); }
-    finally { setCatalogBusy(false); }
+    await openCollection(genre ? `Thể loại ${genre.name}` : "Khám phá phim",{kind:"remote",params:`genre=${encodeURIComponent(slug)}`});
   }
 
   async function loadHome() {
     if (window.location.pathname !== "/") window.history.pushState({}, "", "/");
     setCatalogBusy(true); setError("");
-    try { const [latest,hot,anime]=await Promise.all([api.ophimHome(),api.ophimHot(),api.ophimAnimeHot()]);setMovies(latest);setHotMovies(hot);setHotAnime(anime);setCatalogTitle("Phim mới cập nhật");setCatalogMode("home");setOpenNav(null); window.scrollTo({top:0,behavior:"smooth"}); }
+    try { const [latest,hot,anime]=await Promise.all([api.ophimHome(),api.ophimHot(),api.ophimAnimeHot()]);setMovies(latest);setHotMovies(hot);setHotAnime(anime);setCatalogTitle("Phim mới cập nhật");setCatalogMode("home");setCollectionSource(null);setOpenNav(null); window.scrollTo({top:0,behavior:"smooth"}); }
     catch { setError("Không thể làm mới kho phim."); }
     finally { setCatalogBusy(false); }
   }
 
   async function browseCollection(type: string, title: string) {
-    setCatalogBusy(true); setError("");
-    try { setMovies(await api.ophimMovies(`?type=${encodeURIComponent(type)}&page=1`)); setCatalogTitle(title);setCatalogMode("filtered");setOpenNav(null);window.setTimeout(()=>document.getElementById("catalog")?.scrollIntoView({behavior:"smooth"}),0); }
-    catch { setError("Không thể tải danh mục phim."); }
-    finally { setCatalogBusy(false); }
+    await openCollection(title,{kind:"remote",params:`type=${encodeURIComponent(type)}`});
   }
+
+  async function openCollection(title:string,source:CollectionSource,page=1){setCatalogBusy(true);setError("");try{let items:Movie[],pagination:CatalogPagination;if(source.kind==="local"){const limit=12,total=source.items.length,totalPages=Math.max(1,Math.ceil(total/limit));const safePage=Math.min(Math.max(1,page),totalPages);items=source.items.slice((safePage-1)*limit,safePage*limit);pagination={page:safePage,limit,total,totalPages}}else{const separator=source.params?"&":"";const result=await api.ophimMoviesPage(`?${source.params}${separator}page=${page}`);items=result.items;pagination=result.pagination}setMovies(items);setCatalogPagination(pagination);setCollectionSource(source);setCatalogTitle(title);setCatalogMode("filtered");setQuery("");setOpenNav(null);window.setTimeout(()=>document.getElementById("catalog")?.scrollIntoView({behavior:"smooth",block:"start"}),0)}catch{setError("Không thể tải danh mục phim. Vui lòng thử lại.")}finally{setCatalogBusy(false)}}
+  const changeCatalogPage=(page:number)=>{if(!collectionSource||page<1||page>catalogPagination.totalPages||page===catalogPagination.page)return;void openCollection(catalogTitle,collectionSource,page)};
+  const visiblePages=Array.from(new Set([1,catalogPagination.page-1,catalogPagination.page,catalogPagination.page+1,catalogPagination.totalPages])).filter(page=>page>=1&&page<=catalogPagination.totalPages).sort((a,b)=>a-b);
 
   async function loadPersonalData() {
     const [list, continued] = await Promise.all([
@@ -322,6 +323,7 @@ export function App() {
         {error && <div className="error-banner"><span>{error}</span><button type="button" onClick={loadHome}><RefreshCw size={16}/> Thử lại</button></div>}
         {catalogMode === "home" && featured && (
           <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(11,11,15,.96) 0%, rgba(11,11,15,.78) 42%, rgba(11,11,15,.18) 100%), url(${featured.backdropUrl})` }}>
+            {featured.trailerUrl && <HeroTrailer url={featured.trailerUrl} title={featured.title}/>}
             <div className="hero__copy">
               <span className="eyebrow"><Sparkles size={16} /> Lựa chọn nổi bật hôm nay</span>
               <h1>{featured.title}</h1>
@@ -383,18 +385,18 @@ export function App() {
         {catalogBusy && <div className="catalog-progress"><span/></div>}
 
         {catalogMode === "home" && user && watchlist.length > 0 && (
-          <MovieRow title="Danh sách yêu thích của tôi" movies={watchlist} onOpen={openMovie} />
+          <MovieRow title="Danh sách yêu thích của tôi" movies={watchlist} onOpen={openMovie} onViewAll={()=>void openCollection("Danh sách yêu thích của tôi",{kind:"local",items:watchlist})} />
         )}
 
         {catalogMode === "home" && continueWatching.length > 0 && (
-          <MovieRow title="Tiếp tục xem" movies={continueWatching} onOpen={openMovie} />
+          <MovieRow title="Tiếp tục xem" movies={continueWatching} onOpen={openMovie} onViewAll={()=>void openCollection("Tiếp tục xem",{kind:"local",items:continueWatching})} />
         )}
         {catalogMode === "home" ? <>
-          <MovieRow title="Top phim hot 2026" movies={hotMovies.slice(0,12)} onOpen={openMovie} />
-          <MovieRow title={catalogTitle} movies={trending} onOpen={openMovie} />
-          <MovieRow title="Đề xuất cho bạn" movies={forYou} onOpen={openMovie} />
-          {hotAnime.length > 0 && <MovieRow title="Anime hot gần đây" movies={hotAnime} onOpen={openMovie} />}
-        </> : <div className="catalog-results"><MovieRow title={catalogTitle} movies={movies} onOpen={openMovie} /></div>}
+          <MovieRow title="Top phim hot 2026" movies={hotMovies.slice(0,12)} onOpen={openMovie} onViewAll={()=>void openCollection("Top phim hot 2026",{kind:"remote",params:"year=2026&sort=view&playableOnly=true"})} />
+          <MovieRow title={catalogTitle} movies={trending} onOpen={openMovie} onViewAll={()=>void openCollection("Phim mới cập nhật",{kind:"remote",params:""})} />
+          <MovieRow title="Đề xuất cho bạn" movies={forYou} onOpen={openMovie} onViewAll={()=>void openCollection("Đề xuất cho bạn",{kind:"local",items:forYou})} />
+          {hotAnime.length > 0 && <MovieRow title="Anime hot gần đây" movies={hotAnime} onOpen={openMovie} onViewAll={()=>void openCollection("Tất cả anime gần đây",{kind:"remote",params:"type=hoat-hinh&playableOnly=true"})} />}
+        </> : <div className="catalog-results"><MovieRow title={catalogTitle} movies={movies} onOpen={openMovie} />{catalogPagination.totalPages>1&&<nav className="catalog-pagination" aria-label="Phân trang danh sách phim"><button type="button" onClick={()=>changeCatalogPage(catalogPagination.page-1)} disabled={catalogPagination.page===1}><ChevronLeft/> Trước</button><div>{visiblePages.map((page,index)=><span key={page}>{index>0&&page-visiblePages[index-1]>1&&<i>…</i>}<button type="button" className={page===catalogPagination.page?"active":""} aria-current={page===catalogPagination.page?"page":undefined} onClick={()=>changeCatalogPage(page)}>{page}</button></span>)}</div><button type="button" onClick={()=>changeCatalogPage(catalogPagination.page+1)} disabled={catalogPagination.page===catalogPagination.totalPages}>Sau <ChevronRight/></button><small>Trang {catalogPagination.page}/{catalogPagination.totalPages} · {catalogPagination.total.toLocaleString("vi-VN")} phim</small></nav>}</div>}
 
         {catalogMode === "home" && canAccessAdmin && <section className="admin-section" id="admin">
           <div>
