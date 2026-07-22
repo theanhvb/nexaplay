@@ -68,7 +68,7 @@ export const api = {
     });
   },
   logout() { return request<{loggedOut:boolean}>("/v1/auth/logout",{method:"POST"},false); },
-  forgotPassword(email:string) { return request<{accepted:boolean;devResetToken?:string}>("/v1/auth/forgot-password",{method:"POST",body:JSON.stringify({email})}); },
+  forgotPassword(email:string) { return request<{accepted:boolean;delivery:"manual"|"email";message:string;devResetToken?:string}>("/v1/auth/forgot-password",{method:"POST",body:JSON.stringify({email})}); },
   resetPassword(token:string,password:string) { return request<{reset:boolean}>("/v1/auth/reset-password",{method:"POST",body:JSON.stringify({token,password})}); },
   me() {
     return request<User>("/v1/users/me");
@@ -145,6 +145,7 @@ export const api = {
   ,adminUser(id:string) { return request<{id:string;email:string;displayName:string;role:string;status:string;subscriptionTier:string;lastLoginAt:string|null;createdAt:string;profiles:Array<{id:string;name:string;avatar_url?:string;is_kids:boolean;maturity_level:string}>;devices:Array<{id:string;user_agent:string;ip_address:string;last_seen_at:string;expires_at:string;revoked_at:string|null}>}>(`/v1/admin/users/${id}`); }
   ,updateAdminUserStatus(id:string,status:"active"|"suspended") { return request<{id:string;status:string}>(`/v1/admin/users/${id}/status`,{method:"PATCH",body:JSON.stringify({status})}); }
   ,updateAdminUserRole(id:string,role:string) { return request<{id:string;role:string}>(`/v1/admin/users/${id}/role`,{method:"PATCH",body:JSON.stringify({role})}); }
+  ,createAdminPasswordReset(id:string) { return request<{resetToken:string;expiresInMinutes:number}>(`/v1/admin/users/${id}/password-reset`,{method:"POST"}); }
   ,adminGenres() { return request<Array<{id:string;name:string;slug:string;description?:string;active:boolean;position:number;_count:{movies:number}}>>("/v1/admin/genres"); }
   ,createAdminGenre(payload:Record<string,unknown>) { return request("/v1/admin/genres",{method:"POST",body:JSON.stringify(payload)}); }
   ,updateAdminGenre(id:string,payload:Record<string,unknown>) { return request(`/v1/admin/genres/${id}`,{method:"PATCH",body:JSON.stringify(payload)}); }

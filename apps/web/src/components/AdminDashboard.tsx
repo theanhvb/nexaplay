@@ -9,8 +9,10 @@ import {
   Edit3,
   EyeOff,
   Film,
+  KeyRound,
   LayoutDashboard,
   Lock,
+  LogOut,
   MessageSquare,
   Moon,
   Plus,
@@ -24,7 +26,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import type { Movie } from "../../../../packages/shared-types/src/index";
+import type { Movie, User } from "../../../../packages/shared-types/src/index";
 import { api } from "../services/api";
 
 type Module =
@@ -241,7 +243,7 @@ function moduleFromPath(): Module {
     : "overview";
 }
 
-export function AdminDashboard({ onBack,theme,onToggleTheme }: { onBack: () => void;theme:"dark"|"light";onToggleTheme:()=>void }) {
+export function AdminDashboard({onBack,theme,onToggleTheme,currentUser,onLogout}:{onBack:()=>void;theme:"dark"|"light";onToggleTheme:()=>void;currentUser:User;onLogout:()=>void}) {
   const [module, setModule] = useState<Module>(moduleFromPath),
     [stats, setStats] = useState<Stats | null>(null),
     [movies, setMovies] = useState<AdminMovie[]>([]),
@@ -589,9 +591,11 @@ export function AdminDashboard({ onBack,theme,onToggleTheme }: { onBack: () => v
       setError(e instanceof Error ? e.message : "Không thể xử lý hàng loạt");
     }
   }
+  async function createPasswordReset(user:AdminUser){try{const result=await api.createAdminPasswordReset(user.id);await navigator.clipboard.writeText(result.resetToken);window.alert(`Đã tạo và sao chép mã đặt lại cho ${user.email}.\n\nMã có hiệu lực ${result.expiresInMinutes} phút. Chỉ gửi mã sau khi đã xác minh người dùng.`)}catch(e){setError(e instanceof Error?e.message:"Không thể tạo mã đặt lại")}}
 
   return (
     <main className="admin-workspace">
+      <div className="admin-environment-ribbon"><ShieldCheck/> KHU VỰC QUẢN TRỊ · THAO TÁC ẢNH HƯỞNG DỮ LIỆU THẬT</div>
       <aside className="admin-sidebar">
         <button
           className="admin-sidebar__brand"
@@ -655,6 +659,7 @@ export function AdminDashboard({ onBack,theme,onToggleTheme }: { onBack: () => v
           </button>
           <button className={module==="settings"?"active":""} onClick={()=>navigate("settings")}><ShieldCheck/>Cài đặt</button>
         </nav>
+        <div className="admin-session-card"><span>{currentUser.displayName.slice(0,1).toUpperCase()}</span><div><b>{currentUser.displayName}</b><small>{currentUser.role.replace("_"," ")}</small></div></div>
         <button className="admin-sidebar__back admin-theme-toggle" onClick={onToggleTheme}>
           {theme==="dark"?<Sun/>:<Moon/>}
           {theme==="dark"?"Giao diện sáng":"Giao diện tối"}
@@ -663,6 +668,7 @@ export function AdminDashboard({ onBack,theme,onToggleTheme }: { onBack: () => v
           <ArrowLeft />
           Về trang xem phim
         </button>
+        <button className="admin-sidebar__back admin-logout" onClick={onLogout}><LogOut/>Đăng xuất quản trị</button>
       </aside>
       <section className="admin-main">
         <header className="admin-page-header">
@@ -747,6 +753,7 @@ export function AdminDashboard({ onBack,theme,onToggleTheme }: { onBack: () => v
             goPage={loadUsers}
             toggle={toggleUser}
             changeRole={changeRole}
+            createPasswordReset={createPasswordReset}
           />
         )}{" "}
         {!loading && module === "genres" && (
@@ -994,6 +1001,7 @@ function LegacyUsersTable({
   reload,
   toggle,
   changeRole,
+  createPasswordReset,
 }: {
   users: AdminUser[];
   query: string;
@@ -1001,6 +1009,7 @@ function LegacyUsersTable({
   reload: () => void;
   toggle: (u: AdminUser) => void;
   changeRole: (u: AdminUser, r: string) => void;
+  createPasswordReset: (u:AdminUser)=>void;
 }) {
   return (
     <section className="admin-panel catalog-manager">
@@ -1056,7 +1065,7 @@ function LegacyUsersTable({
             <i className={`user-status ${user.status}`}>
               {user.status === "active" ? "Hoạt động" : "Đã khóa"}
             </i>
-            <button className="admin-lock-button" onClick={() => toggle(user)}>
+            <span className="admin-row-actions"><button className="admin-lock-button" title="Tạo mã đặt lại mật khẩu" onClick={()=>void createPasswordReset(user)}><KeyRound/>Mã reset</button><button className="admin-lock-button" onClick={() => toggle(user)}>
               {user.status === "active" ? (
                 <>
                   <Lock />
@@ -1068,7 +1077,7 @@ function LegacyUsersTable({
                   Mở khóa
                 </>
               )}
-            </button>
+            </button></span>
           </div>
         ))}
       </div>
@@ -1092,6 +1101,7 @@ function UsersTable({
   goPage,
   toggle,
   changeRole,
+  createPasswordReset,
 }: {
   users: AdminUser[];
   pagination: UserPagination;
@@ -1109,6 +1119,7 @@ function UsersTable({
   goPage: (p: number) => void;
   toggle: (u: AdminUser) => void;
   changeRole: (u: AdminUser, r: string) => void;
+  createPasswordReset: (u:AdminUser)=>void;
 }) {
   return (
     <section className="admin-panel catalog-manager">
@@ -1179,6 +1190,7 @@ function UsersTable({
               <small>
                 Tham gia {new Date(user.createdAt).toLocaleDateString("vi-VN")}
               </small>
+              <button className="admin-lock-button admin-reset-button" onClick={()=>void createPasswordReset(user)}><KeyRound/>Tạo mã reset</button>
             </span>
             <b>{user.subscriptionTier}</b>
             <span>

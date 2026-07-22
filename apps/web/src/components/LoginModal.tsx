@@ -11,7 +11,7 @@ export function LoginModal({onClose,onLogin,onRegister}:Props){
   async function submit(event:FormEvent){event.preventDefault();setLoading(true);setError("");setNotice("");try{
     if(mode==="login"){await onLogin(email,password);onClose();return}
     if(mode==="register"){if(password!==confirmPassword)throw new Error("Mật khẩu xác nhận không khớp");await onRegister(email,password,displayName);onClose();return}
-    if(mode==="forgot"){const result=await api.forgotPassword(email);setNotice("Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được tạo.");if(result.devResetToken){setResetToken(result.devResetToken);setMode("reset")}return}
+    if(mode==="forgot"){const result=await api.forgotPassword(email);setNotice(result.message);if(result.devResetToken){setResetToken(result.devResetToken);setMode("reset")}return}
     if(password!==confirmPassword)throw new Error("Mật khẩu xác nhận không khớp");await api.resetPassword(resetToken,password);setNotice("Đặt lại mật khẩu thành công. Bạn có thể đăng nhập.");setMode("login");setResetToken("");
   }catch(err){setError(err instanceof Error?err.message:"Thao tác thất bại")}finally{setLoading(false)}}
   return <div className="modal-shell" role="dialog" aria-modal="true"><form className="auth-modal auth-service-modal" onSubmit={submit}>
@@ -24,7 +24,7 @@ export function LoginModal({onClose,onLogin,onRegister}:Props){
     {(mode==="login"||mode==="register"||mode==="reset")&&<label>{mode==="reset"?"Mật khẩu mới":"Mật khẩu"}<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={mode==="login"?1:10} maxLength={128} autoComplete={mode==="login"?"current-password":"new-password"}/></label>}
     {(mode==="register"||mode==="reset")&&<label>Xác nhận mật khẩu<input type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} required minLength={10} autoComplete="new-password"/></label>}
     {mode==="login"&&<button type="button" className="forgot-link" onClick={()=>changeMode("forgot")}>Quên mật khẩu?</button>}
-    {mode==="forgot"&&<p className="muted">Nhập email tài khoản. Liên kết đặt lại có hiệu lực trong 30 phút.</p>}
+    {mode==="forgot"&&<><p className="muted">Nhập email tài khoản. Khi chưa cấu hình email, quản trị viên sẽ cấp mã sau khi xác minh.</p><button type="button" className="forgot-link" onClick={()=>changeMode("reset")}>Tôi đã có mã đặt lại</button></>}
     {error&&<p className="form-error">{error}</p>}{notice&&<p className="form-success">{notice}</p>}
     <button className="primary-button auth-submit" disabled={loading}>{loading?"Đang xử lý...":mode==="login"?"Đăng nhập":mode==="register"?"Tạo tài khoản":mode==="forgot"?"Gửi hướng dẫn":"Đặt lại mật khẩu"}</button>
   </form></div>
