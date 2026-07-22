@@ -69,26 +69,27 @@ services:
     environment: { <<: *backend-env, WORKSPACE: "@movie-platform/identity-service", PORT: 4101 }
 
   catalog-migrate:
-    image: nexaplay-backend:latest
+    image: postgres:16-alpine
     restart: "no"
-    mem_limit: 144m
-    cpus: 0.25
-    pids_limit: 100
+    mem_limit: 64m
+    cpus: 0.10
+    pids_limit: 50
     logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      <<: *backend-env
-      CATALOG_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/catalog_db
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ./packages/database/prisma/catalog/migrations:/migrations:ro
     command:
       - /bin/sh
       - -c
       - >-
-        npx prisma db execute --schema packages/database/prisma/catalog/schema.prisma
-        --file packages/database/prisma/catalog/migrations/202607220001_content_management/migration.sql &&
-        npx prisma db execute --schema packages/database/prisma/catalog/schema.prisma
-        --file packages/database/prisma/catalog/migrations/202607220002_catalog_source_of_truth/migration.sql
+        psql --set ON_ERROR_STOP=1 --host postgres --username postgres --dbname catalog_db
+        --file /migrations/202607220001_content_management/migration.sql &&
+        psql --set ON_ERROR_STOP=1 --host postgres --username postgres --dbname catalog_db
+        --file /migrations/202607220002_catalog_source_of_truth/migration.sql
 
   catalog:
     <<: *backend
