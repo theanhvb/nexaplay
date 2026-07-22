@@ -20,3 +20,17 @@ SELECT 'CREATE DATABASE analytics_db' WHERE NOT EXISTS (SELECT FROM pg_database 
 \ir /database/06_notification.sql
 \connect analytics_db
 \ir /database/07_analytics.sql
+\connect identity_db
+\ir /database/08_admin_rbac.sql
+\connect review_db
+\ir /database/09_review_moderation.sql
+\connect analytics_db
+\ir /database/10_analytics_real_data.sql
+\connect review_db
+\ir /database/11_review_scale.sql
+\connect identity_db
+\ir /database/12_identity_scale.sql
+\connect analytics_db
+\ir /database/13_analytics_content_daily.sql
+\connect identity_db
+\ir /database/14_system_settings.sql
