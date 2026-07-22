@@ -172,5 +172,29 @@ services:
     depends_on:
       - gateway
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    init: true
+    mem_limit: 64m
+    cpus: 0.10
+    pids_limit: 50
+    logging: *default-logging
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
