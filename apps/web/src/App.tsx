@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Bell, ChevronDown, Clapperboard, Film, LayoutDashboard, LogIn, LogOut, Moon, Play, RefreshCw, Search, Sparkles, Sun, Tv, UserCircle } from "lucide-react";
+import { ArrowLeft, Bell, ChevronDown, Clapperboard, Film, LayoutDashboard, LogIn, Moon, Play, RefreshCw, Search, Sparkles, Sun, Tv, UserCircle } from "lucide-react";
 import { Genre, Movie, User } from "../../../packages/shared-types/src/index";
 import { DetailPanel } from "./components/DetailPanel";
 import { LoginModal } from "./components/LoginModal";
@@ -441,7 +441,6 @@ export function App() {
 
       {showAccount && user && <AccountCenter user={user} activeProfileId={activeProfileId} onClose={() => setShowAccount(false)} onUserChange={setUser} onProfileSwitch={switchProfile} onLogout={()=>void logout()} />}
 
-      {user && <button className="floating-logout" type="button" onClick={()=>void logout()} title="Đăng xuất"><LogOut size={17}/><span>Đăng xuất</span></button>}
 
       {activeVideoMovie && (
         <VideoPlayer
