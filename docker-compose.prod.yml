@@ -6,9 +6,6 @@ x-logging: &default-logging
 
 x-backend: &backend
   image: nexaplay-backend:latest
-  build:
-    context: .
-    dockerfile: Dockerfile.service
   restart: unless-stopped
   init: true
   mem_limit: 144m
@@ -98,6 +95,9 @@ services:
 
   gateway:
     <<: *backend
+    build:
+      context: .
+      dockerfile: Dockerfile.service
     mem_limit: 176m
     environment:
       <<: *backend-env

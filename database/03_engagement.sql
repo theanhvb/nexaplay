@@ -7,4 +7,7 @@ ALTER TABLE watch_progress ALTER COLUMN content_id TYPE varchar(160),ADD COLUMN 
 ALTER TABLE watch_events ALTER COLUMN content_id TYPE varchar(160),ADD COLUMN IF NOT EXISTS episode_slug varchar(120);
 CREATE INDEX IF NOT EXISTS idx_progress_recent ON watch_progress(profile_id,last_watched_at DESC);CREATE INDEX IF NOT EXISTS idx_events_content_time ON watch_events(content_id,occurred_at DESC);
 INSERT INTO watchlist_items VALUES('wat_seed_1','p-minh','m-seoul-after-midnight',now()-interval '2 days'),('wat_seed_2','p-minh','m-last-train',now()-interval '1 day'),('wat_seed_3','p-admin','m-orbit-9',now()) ON CONFLICT DO NOTHING;
-INSERT INTO watch_progress VALUES('prg_seed_1','p-minh','m-neon-delta',64,4915,7680,false,now()-interval '3 hours'),('prg_seed_2','p-minh','m-silent-bay',28,1881,6720,false,now()-interval '1 day') ON CONFLICT DO NOTHING;
+INSERT INTO watch_progress(id,profile_id,content_id,progress,position_seconds,duration_seconds,is_completed,last_watched_at) VALUES
+('prg_seed_1','p-minh','m-neon-delta',64,4915,7680,false,now()-interval '3 hours'),
+('prg_seed_2','p-minh','m-silent-bay',28,1881,6720,false,now()-interval '1 day')
+ON CONFLICT DO NOTHING;
