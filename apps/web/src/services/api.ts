@@ -51,6 +51,7 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
 export const api = {
   ophimHome() { return request<Movie[]>("/v1/ophim/home"); },
   ophimHot() { return request<Movie[]>("/v1/ophim/hot"); },
+  ophimAnimeHot() { return request<Movie[]>("/v1/ophim/anime-hot"); },
   ophimMovies(params = "") { return request<Movie[]>(`/v1/ophim/movies${params}`); },
   ophimMovie(slug: string) { return request<Movie>(`/v1/ophim/movies/${encodeURIComponent(slug)}`); },
   ophimGenres() { return request<Genre[]>("/v1/ophim/genres"); },

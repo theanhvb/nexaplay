@@ -9,7 +9,7 @@ x-service: &service
   environment: &service-env
     PGHOST: postgres
     PGUSER: postgres
-    PGPASSWORD: 12345
+    PGPASSWORD: postgres
     JWT_SECRET: ${JWT_SECRET:-local-dev-change-this-secret}
     INTERNAL_SECRET: ${INTERNAL_SECRET:-local-internal-secret}
 
@@ -36,31 +36,31 @@ services:
   identity:
     <<: *service
     build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/identity-service" } }
-    environment: { <<: *service-env, PORT: 4101, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/identity_db" }
+    environment: { <<: *service-env, PORT: 4101, DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/identity_db" }
   catalog:
     <<: *service
     build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/catalog-service" } }
-    environment: { <<: *service-env, PORT: 4102, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/catalog_db" }
+    environment: { <<: *service-env, PORT: 4102, DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/catalog_db" }
   engagement:
     <<: *service
     build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/engagement-service" } }
-    environment: { <<: *service-env, PORT: 4103, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/engagement_db" }
+    environment: { <<: *service-env, PORT: 4103, DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/engagement_db" }
   review:
     <<: *service
     build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/review-service" } }
-    environment: { <<: *service-env, PORT: 4104, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/review_db" }
+    environment: { <<: *service-env, PORT: 4104, DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/review_db" }
   billing:
     <<: *service
     build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/billing-service" } }
-    environment: { <<: *service-env, PORT: 4105, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/billing_db" }
+    environment: { <<: *service-env, PORT: 4105, DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/billing_db" }
   notification:
     <<: *service
     build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/notification-service" } }
-    environment: { <<: *service-env, PORT: 4106, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/notification_db" }
+    environment: { <<: *service-env, PORT: 4106, DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/notification_db" }
   analytics:
     <<: *service
     build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/analytics-service" } }
-    environment: { <<: *service-env, PORT: 4107, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/analytics_db" }
+    environment: { <<: *service-env, PORT: 4107, DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/analytics_db" }
   gateway:
     <<: *service
     build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/api" } }

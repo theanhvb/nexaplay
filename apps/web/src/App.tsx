@@ -21,6 +21,7 @@ type AdminStats = {
 export function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [hotMovies,setHotMovies]=useState<Movie[]>([]);
+  const [hotAnime,setHotAnime]=useState<Movie[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -50,11 +51,12 @@ export function App() {
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";
     if (!window.location.hash || window.location.hash === "#home") window.scrollTo(0, 0);
     const initialMovies=api.ophimHome();
-    Promise.all([initialMovies, initialMovies.then(()=>api.ophimGenres()),api.ophimHot()])
-      .then(([movieData, genreData,hotData]) => {
+    Promise.all([initialMovies, initialMovies.then(()=>api.ophimGenres()),api.ophimHot(),api.ophimAnimeHot()])
+      .then(([movieData, genreData,hotData,animeData]) => {
         setMovies(movieData);
         setGenres(genreData);
         setHotMovies(hotData);
+        setHotAnime(animeData);
       })
       .catch(() => setError("Không thể tải kho phim. Vui lòng kiểm tra kết nối và thử lại."))
       .finally(() => setLoading(false));
@@ -90,7 +92,7 @@ export function App() {
   }, [query]);
 
   useEffect(() => {
-    if (user?.role !== "admin") {
+    if (!user || !["admin", "super_admin", "content_editor", "support"].includes(user.role)) {
       setAdminStats(null);
       return;
     }
@@ -100,7 +102,6 @@ export function App() {
   const featured = movies.find((movie) => movie.isFeatured) ?? movies[0];
   const trending = movies.filter((movie) => movie.isTrending);
   const forYou = movies.filter((movie) => movie.matchScore >= 90);
-  const korean = movies.filter((movie) => movie.country?.includes("Hàn Quốc"));
   const related = useMemo(() => {
     if (!selectedMovie) return [];
     return movies.filter((movie) => movie.id !== selectedMovie.id && movie.genres.some((genre) => selectedMovie.genres.includes(genre)));
@@ -135,7 +136,7 @@ export function App() {
   async function loadHome() {
     if (window.location.pathname !== "/") window.history.pushState({}, "", "/");
     setCatalogBusy(true); setError("");
-    try { const [latest,hot]=await Promise.all([api.ophimHome(),api.ophimHot()]);setMovies(latest);setHotMovies(hot);setCatalogTitle("Phim mới cập nhật");setCatalogMode("home");setOpenNav(null); window.scrollTo({top:0,behavior:"smooth"}); }
+    try { const [latest,hot,anime]=await Promise.all([api.ophimHome(),api.ophimHot(),api.ophimAnimeHot()]);setMovies(latest);setHotMovies(hot);setHotAnime(anime);setCatalogTitle("Phim mới cập nhật");setCatalogMode("home");setOpenNav(null); window.scrollTo({top:0,behavior:"smooth"}); }
     catch { setError("Không thể làm mới kho phim."); }
     finally { setCatalogBusy(false); }
   }
@@ -392,10 +393,10 @@ export function App() {
           <MovieRow title="Top phim hot 2026" movies={hotMovies.slice(0,12)} onOpen={openMovie} />
           <MovieRow title={catalogTitle} movies={trending} onOpen={openMovie} />
           <MovieRow title="Đề xuất cho bạn" movies={forYou} onOpen={openMovie} />
-          {korean.length > 0 && <MovieRow title="Phim Hàn Quốc" movies={korean} onOpen={openMovie} />}
+          {hotAnime.length > 0 && <MovieRow title="Anime hot gần đây" movies={hotAnime} onOpen={openMovie} />}
         </> : <div className="catalog-results"><MovieRow title={catalogTitle} movies={movies} onOpen={openMovie} /></div>}
 
-        {catalogMode === "home" && <section className="admin-section" id="admin">
+        {catalogMode === "home" && canAccessAdmin && <section className="admin-section" id="admin">
           <div>
             <span className="eyebrow"><LayoutDashboard size={16} /> Admin/CMS</span>
             <h2>Dashboard nội dung</h2>
