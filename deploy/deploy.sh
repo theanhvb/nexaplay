@@ -36,6 +36,7 @@ git pull --ff-only origin main
 docker compose --parallel 1 --env-file .env -f docker-compose.prod.yml build
 docker compose --env-file .env -f docker-compose.prod.yml up -d --remove-orphans
 docker image prune -f
+docker builder prune -f --keep-storage 750MB
 
 echo "Đang chờ website sẵn sàng..."
 attempt=0
