@@ -163,7 +163,7 @@ export function App() {
     if (payload.user.profiles && payload.user.profiles.length > 0) {
       setActiveProfileId(payload.user.profiles[0].id);
     }
-    await Promise.all([loadHome(), loadPersonalData()]);
+    await Promise.allSettled([loadHome(), loadPersonalData()]);
     window.scrollTo({ top: 0 });
   }
 
@@ -175,8 +175,7 @@ export function App() {
     if (payload.user.profiles && payload.user.profiles.length > 0) {
       setActiveProfileId(payload.user.profiles[0].id);
     }
-    await loadHome();
-    await loadPersonalData();
+    await Promise.allSettled([loadHome(), loadPersonalData()]);
     window.scrollTo({ top: 0 });
   }
 

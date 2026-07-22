@@ -3,6 +3,13 @@ import { ApiResponse, AppNotification, Genre, Movie, Plan, Profile, Review, Revi
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 const TOKEN_KEY = "movie-platform-token";
 const REFRESH_KEY = "movie-platform-refresh-token";
+const ERROR_MESSAGES:Record<string,string>={
+  EMAIL_EXISTS:"Email này đã được đăng ký. Hãy chuyển sang tab Đăng nhập.",
+  INVALID_CREDENTIALS:"Email hoặc mật khẩu không chính xác.",
+  ACCOUNT_SUSPENDED:"Tài khoản này đang bị tạm khóa.",
+  VALIDATION_ERROR:"Thông tin nhập vào chưa hợp lệ.",
+  SERVICE_UNAVAILABLE:"Dịch vụ đang tạm thời gián đoạn. Vui lòng thử lại."
+};
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -36,7 +43,7 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
     return request<T>(path, options, false);
   }
   if (!response.ok || !payload.success) {
-    throw new Error(payload.error?.message ?? "Request failed");
+    throw new Error((payload.error?.code&&ERROR_MESSAGES[payload.error.code])||payload.error?.message||"Không thể thực hiện yêu cầu.");
   }
   return payload.data;
 }
