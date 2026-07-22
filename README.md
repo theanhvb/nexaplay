@@ -31,6 +31,16 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 Backup thủ công bằng `./deploy/backup.sh`. Có thể thêm cron chạy hằng ngày; script tự xóa bản cũ hơn 7 ngày.
 
+### Publish và tự động cập nhật VPS
+
+Sau khi systemd timer đã được cài trên VPS, từ Windows chỉ cần chạy:
+
+```powershell
+.\scripts\publish.ps1 "Mô tả thay đổi"
+```
+
+Script chỉ push khi toàn bộ workspace build thành công. VPS kiểm tra GitHub mỗi 2 phút và tự chạy deploy khi nhánh `main` có commit mới. Xem lịch sử bằng `systemctl status nexaplay-deploy.timer` và `journalctl -u nexaplay-deploy.service -n 100`.
+
 Nền tảng xem phim gồm React/Vite, API Gateway và 7 microservice độc lập. Mỗi service sở hữu một PostgreSQL database riêng; frontend chỉ giao tiếp với Gateway tại `http://localhost:4000`.
 
 ## Chạy nhanh bằng Docker
