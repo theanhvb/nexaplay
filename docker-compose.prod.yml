@@ -81,7 +81,14 @@ services:
     environment:
       <<: *backend-env
       CATALOG_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/catalog_db
-    command: npm run migrate:catalog --workspace packages/database
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        npx prisma db execute --schema packages/database/prisma/catalog/schema.prisma
+        --file packages/database/prisma/catalog/migrations/202607220001_content_management/migration.sql &&
+        npx prisma db execute --schema packages/database/prisma/catalog/schema.prisma
+        --file packages/database/prisma/catalog/migrations/202607220002_catalog_source_of_truth/migration.sql
 
   catalog:
     <<: *backend
