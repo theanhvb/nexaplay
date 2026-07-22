@@ -1,0 +1,142 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-backend: &backend
+  image: nexaplay-backend:latest
+  build:
+    context: .
+    dockerfile: Dockerfile.service
+  restart: unless-stopped
+  init: true
+  mem_limit: 144m
+  cpus: 0.25
+  pids_limit: 100
+  logging: *default-logging
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &backend-env
+    NODE_ENV: production
+    NODE_OPTIONS: --max-old-space-size=96
+    PGHOST: postgres
+    PGPORT: 5432
+    PGUSER: postgres
+    PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    DB_POOL_SIZE: 3
+    JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+    INTERNAL_SECRET: ${INTERNAL_SECRET:?Set INTERNAL_SECRET in .env}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    shm_size: 64mb
+    mem_limit: 384m
+    cpus: 0.40
+    pids_limit: 100
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: postgres
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
+    command:
+      - postgres
+      - -c
+      - max_connections=50
+      - -c
+      - shared_buffers=96MB
+      - -c
+      - effective_cache_size=256MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database:/database:ro
+      - ./database/docker-init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  identity:
+    <<: *backend
+    environment: { <<: *backend-env, WORKSPACE: "@movie-platform/identity-service", PORT: 4101 }
+
+  catalog:
+    <<: *backend
+    mem_limit: 176m
+    environment: { <<: *backend-env, WORKSPACE: "@movie-platform/catalog-service", PORT: 4102 }
+
+  engagement:
+    <<: *backend
+    environment: { <<: *backend-env, WORKSPACE: "@movie-platform/engagement-service", PORT: 4103 }
+
+  review:
+    <<: *backend
+    environment: { <<: *backend-env, WORKSPACE: "@movie-platform/review-service", PORT: 4104 }
+
+  billing:
+    <<: *backend
+    environment: { <<: *backend-env, WORKSPACE: "@movie-platform/billing-service", PORT: 4105 }
+
+  notification:
+    <<: *backend
+    environment: { <<: *backend-env, WORKSPACE: "@movie-platform/notification-service", PORT: 4106 }
+
+  analytics:
+    <<: *backend
+    environment: { <<: *backend-env, WORKSPACE: "@movie-platform/analytics-service", PORT: 4107 }
+
+  gateway:
+    <<: *backend
+    mem_limit: 176m
+    environment:
+      <<: *backend-env
+      WORKSPACE: "@movie-platform/api"
+      PORT: 4000
+      WEB_ORIGIN: ${WEB_ORIGIN:?Set WEB_ORIGIN in .env}
+      IDENTITY_URL: http://identity:4101
+      CATALOG_URL: http://catalog:4102
+      ENGAGEMENT_URL: http://engagement:4103
+      REVIEW_URL: http://review:4104
+      BILLING_URL: http://billing:4105
+      NOTIFICATION_URL: http://notification:4106
+      ANALYTICS_URL: http://analytics:4107
+    depends_on:
+      - identity
+      - catalog
+      - engagement
+      - review
+      - billing
+      - notification
+      - analytics
+
+  web:
+    image: nexaplay-web:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+    init: true
+    mem_limit: 64m
+    cpus: 0.15
+    pids_limit: 50
+    logging: *default-logging
+    ports:
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:80"
+    depends_on:
+      - gateway
+
+volumes:
+  postgres_data:

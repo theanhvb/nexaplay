@@ -1,0 +1,12 @@
+.git
+.github
+.runtime
+**/.next
+**/dist
+node_modules
+*.log
+*.dump
+.env
+.env.*
+!.env.example
+!.env.production.example

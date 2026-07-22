@@ -1,5 +1,36 @@
 # Movie Platform — production-oriented microservices
 
+## Deploy lên VPS aaPanel (1 CPU / 2 GB RAM)
+
+Cấu hình production chỉ public frontend tại `127.0.0.1:8080`; PostgreSQL, Gateway và 7 service chỉ nằm trong mạng Docker. Lần đầu trên Ubuntu:
+
+```bash
+git clone https://github.com/theanhvb/nexaplay.git /opt/nexaplay
+cd /opt/nexaplay
+chmod +x deploy/*.sh
+./deploy/deploy.sh
+```
+
+Lần chạy đầu tạo `.env` với secrets ngẫu nhiên rồi dừng lại. Sửa `WEB_ORIGIN` trong `.env` thành domain thật, ví dụ `https://nexaplay.vn`, sau đó chạy lại:
+
+```bash
+./deploy/deploy.sh
+```
+
+Trong aaPanel, tạo website, bật SSL và reverse proxy tới `http://127.0.0.1:8080`. Mẫu cấu hình nằm tại `deploy/aapanel-nginx.conf`. Mỗi lần cập nhật code chỉ cần chạy lại `./deploy/deploy.sh`.
+
+VPS 2 GB nên có 2 GB swap. Tạo một lần:
+
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+Backup thủ công bằng `./deploy/backup.sh`. Có thể thêm cron chạy hằng ngày; script tự xóa bản cũ hơn 7 ngày.
+
 Nền tảng xem phim gồm React/Vite, API Gateway và 7 microservice độc lập. Mỗi service sở hữu một PostgreSQL database riêng; frontend chỉ giao tiếp với Gateway tại `http://localhost:4000`.
 
 ## Chạy nhanh bằng Docker
