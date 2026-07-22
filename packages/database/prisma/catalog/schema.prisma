@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/catalog"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("CATALOG_DATABASE_URL")
+}
+
+enum ContentType {
+  movie
+  series
+}
+
+enum ContentStatus {
+  draft
+  processing
+  scheduled
+  published
+  archived
+}
+
+enum MediaType {
+  poster
+  banner
+  thumbnail
+  trailer
+  video
+}
+
+enum EncodeStatus {
+  pending
+  uploading
+  queued
+  processing
+  completed
+  failed
+}
+
+model Movie {
+  id                 String        @id @db.VarChar(160)
+  title              String        @db.VarChar(255)
+  slug               String?       @unique @db.VarChar(180)
+  originalTitle      String        @default("") @map("original_title") @db.VarChar(255)
+  description        String
+  shortDescription   String?       @map("short_description")
+  releaseYear        Int           @map("release_year")
+  durationMinutes    Int           @map("duration_minutes")
+  ageRating          String        @map("age_rating") @db.VarChar(10)
+  rating             Decimal       @default(0) @db.Decimal(3, 1)
+  matchScore         Int           @default(80) @map("match_score")
+  contentType        String        @map("content_type") @db.VarChar(10)
+  directorLegacy     String        @map("director") @db.VarChar(150)
+  posterUrl          String        @map("poster_url")
+  backdropUrl        String        @map("backdrop_url")
+  trailerUrl         String        @map("trailer_url")
+  genresLegacy       String[]      @default([]) @map("genres")
+  castLegacy         String[]      @default([]) @map("cast_members")
+  country            String?       @db.VarChar(100)
+  language           String?       @db.VarChar(80)
+  isTrending         Boolean       @default(false) @map("is_trending")
+  isFeatured         Boolean       @default(false) @map("is_featured")
+  status             String        @default("draft") @db.VarChar(15)
+  viewCount          BigInt        @default(0) @map("view_count")
+  scheduledPublishAt DateTime?     @map("scheduled_publish_at") @db.Timestamptz
+  publishedAt        DateTime?     @map("published_at") @db.Timestamptz
+  seoTitle           String?       @map("seo_title") @db.VarChar(255)
+  seoDescription     String?       @map("seo_description")
+  seoKeywords        String[]      @default([]) @map("seo_keywords")
+  createdById        String?       @map("created_by_id") @db.VarChar(40)
+  updatedById        String?       @map("updated_by_id") @db.VarChar(40)
+  deletedAt          DateTime?     @map("deleted_at") @db.Timestamptz
+  source             String        @default("manual") @db.VarChar(30)
+  sourceSlug         String?       @map("source_slug") @db.VarChar(180)
+  managedByAdmin     Boolean       @default(true) @map("managed_by_admin")
+  lastSyncedAt       DateTime?     @map("last_synced_at") @db.Timestamptz
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  seasons   Season[]
+  media     Media[]
+  subtitles Subtitle[]
+  genres    MovieGenre[]
+  actors    MovieActor[]
+  directors MovieDirector[]
+  tags      MovieTag[]
+
+  @@index([status, publishedAt])
+  @@index([contentType, releaseYear])
+  @@map("movies")
+}
+
+model Season {
+  id          String   @id @db.VarChar(40)
+  movieId     String   @map("movie_id") @db.VarChar(160)
+  number      Int
+  title       String?  @db.VarChar(255)
+  description String?
+  posterUrl   String?  @map("poster_url")
+  position    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  movie       Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  episodes    Episode[]
+
+  @@unique([movieId, number])
+  @@index([movieId, position])
+  @@map("seasons")
+}
+
+model Episode {
+  id                 String        @id @db.VarChar(40)
+  seasonId           String        @map("season_id") @db.VarChar(40)
+  number             Int
+  title              String        @db.VarChar(255)
+  slug               String        @db.VarChar(180)
+  description        String?
+  durationMinutes    Int?          @map("duration_minutes")
+  thumbnailUrl       String?       @map("thumbnail_url")
+  status             String        @default("draft") @db.VarChar(15)
+  scheduledPublishAt DateTime?     @map("scheduled_publish_at") @db.Timestamptz
+  publishedAt        DateTime?     @map("published_at") @db.Timestamptz
+  position           Int           @default(0)
+  viewCount          BigInt        @default(0) @map("view_count")
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  season             Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  media              Media[]
+  subtitles          Subtitle[]
+
+  @@unique([seasonId, number])
+  @@unique([seasonId, slug])
+  @@index([seasonId, position])
+  @@map("episodes")
+}
+
+model Media {
+  id              String       @id @db.VarChar(40)
+  movieId         String?      @map("movie_id") @db.VarChar(160)
+  episodeId       String?      @map("episode_id") @db.VarChar(40)
+  type            String       @db.VarChar(20)
+  quality         String?      @db.VarChar(20)
+  storageProvider String       @map("storage_provider") @db.VarChar(30)
+  storageKey      String       @map("storage_key")
+  url             String
+  mimeType        String?      @map("mime_type") @db.VarChar(100)
+  fileSize        BigInt?      @map("file_size")
+  width           Int?
+  height          Int?
+  durationSeconds Int?         @map("duration_seconds")
+  encodeStatus    String       @default("pending") @map("encode_status") @db.VarChar(20)
+  encodeProgress  Int          @default(0) @map("encode_progress")
+  checksum        String?      @db.VarChar(128)
+  position        Int          @default(0)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  movie           Movie?       @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  episode         Episode?     @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([movieId, type])
+  @@index([episodeId, type])
+  @@index([encodeStatus])
+  @@map("media")
+}
+
+model Subtitle {
+  id         String   @id @db.VarChar(40)
+  movieId    String?  @map("movie_id") @db.VarChar(160)
+  episodeId  String?  @map("episode_id") @db.VarChar(40)
+  language   String   @db.VarChar(20)
+  label      String   @db.VarChar(80)
+  storageKey String   @map("storage_key")
+  url        String
+  format     String   @db.VarChar(10)
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  movie      Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  episode    Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([movieId, language])
+  @@index([episodeId, language])
+  @@map("subtitles")
+}
+
+model Genre {
+  id          String       @id @db.VarChar(40)
+  name        String       @unique @db.VarChar(80)
+  slug        String       @unique @db.VarChar(80)
+  description String?
+  position    Int          @default(0)
+  active      Boolean      @default(true)
+  movies      MovieGenre[]
+  @@index([position])
+  @@map("genres")
+}
+
+model Actor {
+  id        String       @id @db.VarChar(40)
+  name      String       @db.VarChar(160)
+  slug      String       @unique @db.VarChar(180)
+  avatarUrl String?      @map("avatar_url")
+  biography String?
+  birthDate DateTime?    @map("birth_date") @db.Date
+  country   String?      @db.VarChar(100)
+  movies    MovieActor[]
+  @@index([name])
+  @@map("actors")
+}
+
+model Director {
+  id        String          @id @db.VarChar(40)
+  name      String          @db.VarChar(160)
+  slug      String          @unique @db.VarChar(180)
+  avatarUrl String?         @map("avatar_url")
+  biography String?
+  movies    MovieDirector[]
+  @@index([name])
+  @@map("directors")
+}
+
+model Tag {
+  id     String     @id @db.VarChar(40)
+  name   String     @db.VarChar(80)
+  slug   String     @unique @db.VarChar(100)
+  movies MovieTag[]
+  @@map("tags")
+}
+
+model MovieGenre {
+  movieId String @map("movie_id") @db.VarChar(160)
+  genreId String @map("genre_id") @db.VarChar(40)
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre   Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  @@id([movieId, genreId])
+  @@map("movie_genres")
+}
+
+model MovieActor {
+  movieId      String @map("movie_id") @db.VarChar(160)
+  actorId      String @map("actor_id") @db.VarChar(40)
+  characterName String? @map("character_name") @db.VarChar(160)
+  position     Int    @default(0)
+  movie        Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  actor        Actor  @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  @@id([movieId, actorId])
+  @@map("movie_actors")
+}
+
+model MovieDirector {
+  movieId   String   @map("movie_id") @db.VarChar(160)
+  directorId String  @map("director_id") @db.VarChar(40)
+  movie      Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  director   Director @relation(fields: [directorId], references: [id], onDelete: Cascade)
+  @@id([movieId, directorId])
+  @@map("movie_directors")
+}
+
+model MovieTag {
+  movieId String @map("movie_id") @db.VarChar(160)
+  tagId   String @map("tag_id") @db.VarChar(40)
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  @@id([movieId, tagId])
+  @@map("movie_tags")
+}

@@ -1,0 +1,26 @@
+{
+  "name": "movie-streaming-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n gateway,identity,catalog,engagement,review,billing,notification,analytics,web \"npm:dev --workspace services/api\" \"npm:dev --workspace services/identity\" \"npm:dev --workspace services/catalog\" \"npm:dev --workspace services/engagement\" \"npm:dev --workspace services/review\" \"npm:dev --workspace services/billing\" \"npm:dev --workspace services/notification\" \"npm:dev --workspace services/analytics\" \"npm:dev --workspace apps/web\"",
+    "dev:backend": "concurrently -n gateway,identity,catalog,engagement,review,billing,notification,analytics \"npm:dev --workspace services/api\" \"npm:dev --workspace services/identity\" \"npm:dev --workspace services/catalog\" \"npm:dev --workspace services/engagement\" \"npm:dev --workspace services/review\" \"npm:dev --workspace services/billing\" \"npm:dev --workspace services/notification\" \"npm:dev --workspace services/analytics\"",
+    "start:backend": "powershell -ExecutionPolicy Bypass -File ./scripts/start-backend.ps1",
+    "start:backend:reset": "powershell -ExecutionPolicy Bypass -File ./scripts/start-backend.ps1 -ResetCredential",
+    "build": "npm run build --workspaces --if-present",
+    "start:api": "npm run dev --workspace services/api",
+    "start:web": "npm run dev --workspace apps/web"
+    ,"db:generate:catalog": "npm run generate:catalog --workspace packages/database"
+    ,"db:migrate:catalog": "npm run migrate:catalog --workspace packages/database"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "typescript": "^5.8.3"
+  }
+}

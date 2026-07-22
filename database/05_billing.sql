@@ -1,0 +1,18 @@
+-- pgAdmin: mở Query Tool trên database billing_db rồi chạy toàn bộ file này.
+CREATE TABLE IF NOT EXISTS plans(id varchar(40) PRIMARY KEY,code varchar(20) UNIQUE NOT NULL,name varchar(80) NOT NULL,price_amount numeric(12,2) NOT NULL,currency char(3) NOT NULL DEFAULT 'VND',billing_interval varchar(10) NOT NULL DEFAULT 'month' CHECK(billing_interval IN('month','year')),max_profiles smallint NOT NULL,max_concurrent_streams smallint NOT NULL DEFAULT 1,max_quality varchar(10) NOT NULL,has_ads boolean NOT NULL DEFAULT false,allow_download boolean NOT NULL DEFAULT false,download_limit smallint NOT NULL DEFAULT 0,features jsonb NOT NULL DEFAULT '[]',is_active boolean NOT NULL DEFAULT true);
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS billing_interval varchar(10) NOT NULL DEFAULT 'month';
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_concurrent_streams smallint NOT NULL DEFAULT 1;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS has_ads boolean NOT NULL DEFAULT false;
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS download_limit smallint NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS subscriptions(id varchar(40) PRIMARY KEY,user_id varchar(40) NOT NULL,plan_id varchar(40) NOT NULL REFERENCES plans(id),status varchar(20) NOT NULL CHECK(status IN('active','cancelled','expired','past_due')),current_period_start timestamptz NOT NULL DEFAULT now(),current_period_end timestamptz NOT NULL,cancel_at_period_end boolean NOT NULL DEFAULT false,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS invoices(id varchar(40) PRIMARY KEY,subscription_id varchar(40) NOT NULL REFERENCES subscriptions(id),user_id varchar(40) NOT NULL,amount numeric(12,2) NOT NULL,currency char(3) NOT NULL,status varchar(20) NOT NULL CHECK(status IN('pending','success','failed','refunded')),provider varchar(20),provider_transaction_id varchar(255),issued_at timestamptz NOT NULL DEFAULT now(),paid_at timestamptz);
+CREATE TABLE IF NOT EXISTS invoice_admin_actions(id bigserial PRIMARY KEY,invoice_id varchar(40) NOT NULL REFERENCES invoices(id),admin_user_id varchar(40) NOT NULL,previous_status varchar(20) NOT NULL,next_status varchar(20) NOT NULL,reason text,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS invoice_admin_actions_invoice_idx ON invoice_admin_actions(invoice_id,created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_subscription ON subscriptions(user_id) WHERE status='active';
+INSERT INTO plans(id,code,name,price_amount,currency,billing_interval,max_profiles,max_concurrent_streams,max_quality,has_ads,allow_download,download_limit,features,is_active) VALUES
+('plan-free','free','Miễn phí',0,'VND','month',1,1,'720p',true,false,0,'["Có quảng cáo","Kho nội dung giới hạn"]',true),
+('plan-basic','basic','Cơ bản',99000,'VND','month',2,2,'1080p',false,false,0,'["Không quảng cáo","Full HD","Xem trên 2 thiết bị"]',true),
+('plan-premium','premium','Cao cấp',199000,'VND','month',5,4,'4K',false,true,25,'["4K + HDR","Tải xuống","5 hồ sơ","4 thiết bị cùng lúc"]',true)
+ON CONFLICT DO NOTHING;
+INSERT INTO subscriptions(id,user_id,plan_id,status,current_period_end) VALUES('sub-admin','u-admin','plan-premium','active',now()+interval '30 days'),('sub-minh','u-minh','plan-basic','active',now()+interval '18 days'),('sub-lan','u-lan','plan-free','active',now()+interval '30 days') ON CONFLICT DO NOTHING;
+INSERT INTO invoices(id,subscription_id,user_id,amount,currency,status,provider,provider_transaction_id,paid_at) VALUES('inv-admin','sub-admin','u-admin',199000,'VND','success','demo','seed_admin',now()),('inv-minh','sub-minh','u-minh',99000,'VND','success','demo','seed_minh',now()) ON CONFLICT DO NOTHING;

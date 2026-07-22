@@ -1,0 +1,16 @@
+-- pgAdmin: mở Query Tool trên database identity_db rồi chạy toàn bộ file này.
+CREATE TABLE IF NOT EXISTS users(id varchar(40) PRIMARY KEY,email varchar(255) UNIQUE NOT NULL,password_hash text NOT NULL,display_name varchar(80) NOT NULL,role varchar(10) NOT NULL DEFAULT 'user' CHECK(role IN('user','admin')),subscription_tier varchar(20) NOT NULL DEFAULT 'Free' CHECK(subscription_tier IN('Free','Basic','Premium')),status varchar(20) NOT NULL DEFAULT 'active' CHECK(status IN('active','suspended')),last_login_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS profiles(id varchar(40) PRIMARY KEY,user_id varchar(40) NOT NULL REFERENCES users(id) ON DELETE CASCADE,name varchar(40) NOT NULL,avatar_url text,is_kids boolean NOT NULL DEFAULT false,maturity_level smallint NOT NULL DEFAULT 18 CHECK(maturity_level BETWEEN 0 AND 18),created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS sessions(id varchar(40) PRIMARY KEY,user_id varchar(40) NOT NULL REFERENCES users(id) ON DELETE CASCADE,profile_id varchar(40) NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,refresh_token_hash char(64) UNIQUE NOT NULL,user_agent text,ip_address inet,last_seen_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL,revoked_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS password_reset_tokens(id varchar(40) PRIMARY KEY,user_id varchar(40) NOT NULL REFERENCES users(id) ON DELETE CASCADE,token_hash char(64) UNIQUE NOT NULL,expires_at timestamptz NOT NULL,used_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS password_reset_tokens_lookup_idx ON password_reset_tokens(token_hash) WHERE used_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_sessions_user_active ON sessions(user_id,expires_at) WHERE revoked_at IS NULL;
+INSERT INTO users(id,email,password_hash,display_name,role,subscription_tier) VALUES
+('u-admin','admin@movieapp.dev','scrypt$8172af23b75f20040c6417c84b6a8166$861c832c67fd9205bc5416a75d3d91fe659aff7670c6243be93afdf69157db0640d2eab828aca4122548d69d740414a8fd7ee90079c8446b8fe4f63389e7f033','Admin Movie','admin','Premium'),
+('u-minh','minh.tran@movieapp.dev','scrypt$8172af23b75f20040c6417c84b6a8166$861c832c67fd9205bc5416a75d3d91fe659aff7670c6243be93afdf69157db0640d2eab828aca4122548d69d740414a8fd7ee90079c8446b8fe4f63389e7f033','Minh Tran','user','Basic'),
+('u-lan','lan.pham@movieapp.dev','scrypt$8172af23b75f20040c6417c84b6a8166$861c832c67fd9205bc5416a75d3d91fe659aff7670c6243be93afdf69157db0640d2eab828aca4122548d69d740414a8fd7ee90079c8446b8fe4f63389e7f033','Lan Pham','user','Free') ON CONFLICT DO NOTHING;
+INSERT INTO profiles(id,user_id,name,avatar_url,is_kids,maturity_level) VALUES
+('p-admin','u-admin','Admin','https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=160&q=80',false,18),
+('p-minh','u-minh','Minh','https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80',false,18),
+('p-kid','u-minh','Bống','https://images.unsplash.com/photo-1491013516836-7db643ee125a?auto=format&fit=crop&w=160&q=80',true,12),
+('p-lan','u-lan','Lan','https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',false,18) ON CONFLICT DO NOTHING;

@@ -1,0 +1,43 @@
+import "dotenv/config";
+// API gateway entrypoint.
+import cors from "cors";
+import express, { type Request, type Response } from "express";
+import { fail, ok, verifyJwt } from "@movie-platform/service-kit";
+
+const app=express();
+const urls={identity:process.env.IDENTITY_URL??"http://localhost:4101",catalog:process.env.CATALOG_URL??"http://localhost:4102",engagement:process.env.ENGAGEMENT_URL??"http://localhost:4103",review:process.env.REVIEW_URL??"http://localhost:4104",billing:process.env.BILLING_URL??"http://localhost:4105",notification:process.env.NOTIFICATION_URL??"http://localhost:4106",analytics:process.env.ANALYTICS_URL??"http://localhost:4107"};
+app.use(cors({origin:(process.env.WEB_ORIGIN??"http://localhost:5173").split(",").map(value=>value.trim()),credentials:true}));app.use(express.json({limit:"2mb"}));
+
+function context(req:Request){const token=req.header("authorization")?.replace(/^Bearer\s+/i,"");return token?verifyJwt(token):null}
+function headers(req:Request){const ctx=context(req);return {"content-type":"application/json",...(ctx?{"x-user-id":ctx.userId,"x-profile-id":ctx.profileId,"x-user-role":ctx.role,"x-session-id":ctx.sessionId}:{}),"x-request-id":req.header("x-request-id")??crypto.randomUUID()}}
+async function call(base:string,path:string,req:Request,method=req.method){return fetch(`${base}${path}`,{method,headers:headers(req),body:["GET","HEAD"].includes(method)?undefined:JSON.stringify(req.body??{})})}
+async function forward(base:string,req:Request,res:Response,path=req.originalUrl){try{const upstream=await call(base,path,req);const text=await upstream.text();res.status(upstream.status).type(upstream.headers.get("content-type")??"application/json").send(text)}catch(error){console.error(error);fail(res,503,"SERVICE_UNAVAILABLE","A downstream service is unavailable")}}
+function requireAuth(req:Request,res:Response){if(!context(req)){fail(res,401,"UNAUTHORIZED","Missing or invalid access token");return false}return true}
+
+app.get("/health",async(_req,res)=>{const results=await Promise.allSettled(Object.entries(urls).map(async([name,url])=>({name,ok:(await fetch(`${url}/health`)).ok})));const services=results.map((r,i)=>r.status==="fulfilled"?r.value:{name:Object.keys(urls)[i],ok:false});ok(res,{service:"api-gateway",status:services.every(s=>s.ok)?"ok":"degraded",services})});
+app.all(/^\/v1\/auth\//,(req,res)=>forward(urls.identity,req,res));
+app.get("/v1/users/me",async(req,res)=>{if(!requireAuth(req,res))return;const response=await call(urls.identity,req.originalUrl,req);const payload:any=await response.json();if(!payload.success)return res.status(response.status).json(payload);const subscription=await call(urls.billing,"/v1/billing/subscription",req);if(subscription.ok){const billing:any=await subscription.json();if(billing.data?.plan)payload.data.subscriptionTier=billing.data.plan}res.status(response.status).json(payload)});
+app.all(/^\/v1\/users\/me(?:\/(?:profiles|sessions)(?:\/.*)?|\/active-profile|\/password)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.identity,req,res)});
+app.get("/v1/catalog/movies",async(req,res)=>{const catalog=await call(urls.catalog,req.originalUrl,req);const payload:any=await catalog.json();if(!payload.success||!context(req))return res.status(catalog.status).json(payload);const progressResponse=await call(urls.engagement,"/v1/engagement/progress",req);if(progressResponse.ok){const progress:any=await progressResponse.json();const map=new Map(progress.data.map((x:any)=>[x.contentId,x]));payload.data=payload.data.map((m:any)=>({...m,...(map.get(m.id)?{progress:(map.get(m.id)as any).progress,positionSeconds:(map.get(m.id)as any).positionSeconds}: {})}))}res.status(catalog.status).json(payload)});
+app.all(/^\/v1\/catalog\//,(req,res)=>forward(urls.catalog,req,res));
+app.get(/^\/v1\/ophim\/(?:home|movies(?:\/[^/?]+)?)$/ ,async(req,res)=>{const catalog=await call(urls.catalog,req.originalUrl,req);const payload:any=await catalog.json();if(!payload.success||!context(req))return res.status(catalog.status).json(payload);const progressResponse=await call(urls.engagement,"/v1/engagement/progress",req);if(progressResponse.ok){const progress:any=await progressResponse.json();const map=new Map(progress.data.map((x:any)=>[x.contentId,x]));if(Array.isArray(payload.data))payload.data=payload.data.map((movie:any)=>({...movie,...(map.get(movie.id)??{})}));else if(payload.data?.id)payload.data={...payload.data,...(map.get(payload.data.id)??{})}}res.status(catalog.status).json(payload)});
+app.all(/^\/v1\/ophim(?:\/.*)?$/,(req,res)=>forward(urls.catalog,req,res));
+app.all(/^\/v1\/search(?:\?|$)/,(req,res)=>forward(urls.catalog,req,res));
+app.all(/^\/v1\/recommendations\//,(req,res)=>forward(urls.catalog,req,res));
+app.get("/v1/users/me/watchlist",async(req,res)=>{if(!requireAuth(req,res))return;const upstream=await call(urls.engagement,req.originalUrl,req);const payload:any=await upstream.json();if(!payload.success)return res.status(upstream.status).json(payload);const movies=await Promise.all(payload.data.map(async(x:any)=>{let response=await call(urls.catalog,`/v1/catalog/movies/${encodeURIComponent(x.contentId)}`,req);if(!response.ok)response=await call(urls.catalog,`/v1/ophim/movies/${encodeURIComponent(x.contentId)}`,req);if(!response.ok)return null;const movie:any=await response.json();return movie.success?movie.data:null}));ok(res,movies.filter(Boolean))});
+app.get("/v1/users/me/continue-watching",async(req,res)=>{if(!requireAuth(req,res))return;const upstream=await call(urls.engagement,"/v1/engagement/continue-watching",req);const payload:any=await upstream.json();if(!payload.success)return res.status(upstream.status).json(payload);const movies=await Promise.all(payload.data.map(async(progress:any)=>{let response=await call(urls.catalog,`/v1/ophim/movies/${encodeURIComponent(progress.contentId)}`,req);if(!response.ok)response=await call(urls.catalog,`/v1/catalog/movies/${encodeURIComponent(progress.contentId)}`,req);if(!response.ok)return null;const movie:any=await response.json();return movie.success?{...movie.data,...progress}:null}));ok(res,movies.filter(Boolean))});
+app.all(/^\/v1\/users\/me\/(?:watchlist|progress)(?:\/.*)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.engagement,req,res)});
+app.all(/^\/v1\/engagement\//,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.engagement,req,res)});
+app.all(/^\/v1\/reviews\//,(req,res)=>forward(urls.review,req,res));
+app.all(/^\/v1\/billing\//,(req,res)=>forward(urls.billing,req,res));
+app.all(/^\/v1\/notifications(?:\/.*)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.notification,req,res)});
+app.post("/v1/events/view",async(req,res)=>{const body={type:"content.viewed",contentId:String(req.body.contentId??""),title:String(req.body.title??""),watchMinutes:Math.max(0,Number(req.body.watchMinutes)||0),completionRate:Math.max(0,Math.min(100,Number(req.body.completionRate)||0))};if(!body.contentId)return fail(res,400,"VALIDATION_ERROR","contentId is required");const internalHeaders={"content-type":"application/json","x-internal-secret":process.env.INTERNAL_SECRET??"local-internal-secret"};const [analytics,catalog]=await Promise.allSettled([fetch(`${urls.analytics}/internal/events`,{method:"POST",headers:internalHeaders,body:JSON.stringify(body)}),fetch(`${urls.catalog}/internal/content-view`,{method:"POST",headers:internalHeaders,body:JSON.stringify(body)})]);if(analytics.status==="rejected"||catalog.status==="rejected")return fail(res,503,"EVENT_NOT_RECORDED","Không thể ghi nhận lượt xem");ok(res,{recorded:true},null,202)});
+app.all(/^\/v1\/admin\/content(?:\/.*)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.catalog,req,res)});
+app.all(/^\/v1\/admin\/genres(?:\/.*)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.catalog,req,res)});
+app.all(/^\/v1\/admin\/users(?:\/.*)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.identity,req,res)});
+app.all(/^\/v1\/admin\/settings(?:\/.*)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.identity,req,res)});
+app.all(/^\/v1\/admin\/reviews(?:\/.*)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.review,req,res)});
+app.all(/^\/v1\/admin\/billing(?:\/.*)?$/,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.billing,req,res)});
+app.all(/^\/v1\/admin\//,(req,res)=>{if(!requireAuth(req,res))return;forward(urls.analytics,req,res)});
+app.use((_req,res)=>fail(res,404,"NOT_FOUND","Gateway route not found"));
+app.listen(Number(process.env.PORT??4000),()=>console.log("api-gateway listening on http://localhost:4000"));

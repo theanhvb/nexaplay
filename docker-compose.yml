@@ -1,0 +1,82 @@
+x-service: &service
+  build:
+    context: .
+    dockerfile: Dockerfile.service
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &service-env
+    PGHOST: postgres
+    PGUSER: postgres
+    PGPASSWORD: 12345
+    JWT_SECRET: ${JWT_SECRET:-local-dev-change-this-secret}
+    INTERNAL_SECRET: ${INTERNAL_SECRET:-local-internal-secret}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: movie-platform-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: postgres
+    ports: ["5432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database:/database:ro
+      - ./database/docker-init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  identity:
+    <<: *service
+    build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/identity-service" } }
+    environment: { <<: *service-env, PORT: 4101, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/identity_db" }
+  catalog:
+    <<: *service
+    build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/catalog-service" } }
+    environment: { <<: *service-env, PORT: 4102, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/catalog_db" }
+  engagement:
+    <<: *service
+    build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/engagement-service" } }
+    environment: { <<: *service-env, PORT: 4103, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/engagement_db" }
+  review:
+    <<: *service
+    build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/review-service" } }
+    environment: { <<: *service-env, PORT: 4104, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/review_db" }
+  billing:
+    <<: *service
+    build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/billing-service" } }
+    environment: { <<: *service-env, PORT: 4105, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/billing_db" }
+  notification:
+    <<: *service
+    build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/notification-service" } }
+    environment: { <<: *service-env, PORT: 4106, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/notification_db" }
+  analytics:
+    <<: *service
+    build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/analytics-service" } }
+    environment: { <<: *service-env, PORT: 4107, DATABASE_URL: "postgresql://postgres:12345@postgres:5432/analytics_db" }
+  gateway:
+    <<: *service
+    build: { context: ., dockerfile: Dockerfile.service, args: { WORKSPACE: "@movie-platform/api" } }
+    ports: ["4000:4000"]
+    environment:
+      <<: *service-env
+      PORT: 4000
+      WEB_ORIGIN: http://localhost:5173
+      IDENTITY_URL: http://identity:4101
+      CATALOG_URL: http://catalog:4102
+      ENGAGEMENT_URL: http://engagement:4103
+      REVIEW_URL: http://review:4104
+      BILLING_URL: http://billing:4105
+      NOTIFICATION_URL: http://notification:4106
+      ANALYTICS_URL: http://analytics:4107
+    depends_on: [identity, catalog, engagement, review, billing, notification, analytics]
+
+volumes:
+  postgres_data:
