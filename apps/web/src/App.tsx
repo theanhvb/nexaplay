@@ -246,7 +246,7 @@ export function App() {
   const canAccessAdmin = user && ["admin", "super_admin", "content_editor", "support"].includes(user.role);
 
   if (view === "admin" && canAccessAdmin) {
-    return <AdminDashboard currentUser={user} onLogout={()=>void logout()} theme={theme} onToggleTheme={toggleTheme} onBack={() => { window.history.pushState({}, "", "/"); setView("home"); }} />;
+    return <AdminDashboard currentUser={user} theme={theme} onToggleTheme={toggleTheme} onBack={() => { window.history.pushState({}, "", "/"); setView("home"); }} />;
   }
 
   return (

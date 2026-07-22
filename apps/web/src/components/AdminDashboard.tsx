@@ -12,7 +12,6 @@ import {
   KeyRound,
   LayoutDashboard,
   Lock,
-  LogOut,
   MessageSquare,
   Moon,
   Plus,
@@ -243,7 +242,7 @@ function moduleFromPath(): Module {
     : "overview";
 }
 
-export function AdminDashboard({onBack,theme,onToggleTheme,currentUser,onLogout}:{onBack:()=>void;theme:"dark"|"light";onToggleTheme:()=>void;currentUser:User;onLogout:()=>void}) {
+export function AdminDashboard({onBack,theme,onToggleTheme,currentUser}:{onBack:()=>void;theme:"dark"|"light";onToggleTheme:()=>void;currentUser:User}) {
   const [module, setModule] = useState<Module>(moduleFromPath),
     [stats, setStats] = useState<Stats | null>(null),
     [movies, setMovies] = useState<AdminMovie[]>([]),
@@ -668,7 +667,6 @@ export function AdminDashboard({onBack,theme,onToggleTheme,currentUser,onLogout}
           <ArrowLeft />
           Về trang xem phim
         </button>
-        <button className="admin-sidebar__back admin-logout" onClick={onLogout}><LogOut/>Đăng xuất quản trị</button>
       </aside>
       <section className="admin-main">
         <header className="admin-page-header">
