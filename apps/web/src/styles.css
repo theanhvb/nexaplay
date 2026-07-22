@@ -976,3 +976,104 @@ html[data-theme="light"] .auth-tabs{background:#f0f1f5}html[data-theme="light"] 
 .account-tabs--vertical .account-logout{margin-top:auto;border:1px solid rgba(229,9,20,.25);background:rgba(229,9,20,.08);color:#ff7b84;font-weight:800}.account-tabs--vertical .account-logout:hover{border-color:rgba(229,9,20,.55);background:rgba(229,9,20,.16);color:#fff}html[data-theme="light"] .account-tabs--vertical .account-logout{border-color:#f1c9cc;background:#fff3f4;color:#c91824}
 .account-service-layout{height:min(620px,calc(88vh - 120px));min-height:390px}.account-tabs--vertical{min-height:0;overflow-y:auto}.account-service-content{max-height:none}.account-tabs--vertical .account-logout{position:sticky;bottom:0;flex:none;margin-top:auto;background:#221015;box-shadow:0 -10px 18px #101014}html[data-theme="light"] .account-tabs--vertical .account-logout{box-shadow:0 -10px 18px #f7f8fa}@media(max-width:760px){.account-service-layout{height:min(650px,calc(92vh - 110px));min-height:0}.account-tabs--vertical{overflow-x:auto;overflow-y:hidden}.account-tabs--vertical .account-logout{position:static}}
 .admin-workspace{position:relative;padding-top:28px}.admin-environment-ribbon{position:fixed;z-index:30;inset:0 0 auto;height:28px;display:flex;align-items:center;justify-content:center;gap:7px;background:#8f0710;color:#fff;font-size:10px;font-weight:900;letter-spacing:.12em}.admin-environment-ribbon svg{width:13px}.admin-sidebar{top:28px;height:calc(100vh - 28px)}.admin-session-card{display:flex;align-items:center;gap:9px;margin-top:auto;padding:11px 9px;border-top:1px solid rgba(255,255,255,.08)}.admin-session-card>span{display:grid;width:30px;height:30px;place-items:center;border-radius:8px;background:#3b1015;color:#ff8b92;font-weight:900}.admin-session-card div{display:flex;min-width:0;flex-direction:column}.admin-session-card b{overflow:hidden;font-size:12px;text-overflow:ellipsis;white-space:nowrap}.admin-session-card small{color:#777985;font-size:9px;text-transform:uppercase}.admin-session-card+.admin-theme-toggle{margin-top:4px}.admin-logout{margin-top:4px!important;color:#ff7b84!important}.admin-logout:hover{background:rgba(229,9,20,.12)!important}.admin-row-actions{display:flex!important;gap:5px}.admin-row-actions .admin-lock-button{padding:6px;font-size:10px}.admin-row-actions .admin-lock-button svg{width:12px}html[data-theme="light"] .admin-session-card{border-color:#e1e3e9}@media(max-width:800px){.admin-workspace{padding-top:28px}.admin-environment-ribbon{justify-content:flex-start;padding-left:12px;font-size:8px}.admin-session-card{display:none}}
+
+/* Responsive device hardening */
+html{-webkit-text-size-adjust:100%}
+img,video{max-width:100%}
+input,select,textarea{font-size:16px}
+.movie-strip,.discovery-actions,.account-tabs--vertical,.admin-sidebar{scrollbar-width:thin;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain}
+
+@media(max-width:1024px){
+  .topbar{gap:14px;padding-inline:22px}
+  .search-box{min-width:210px}
+  .hero{background-position:62% center}
+  .site-footer__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:760px){
+  .modal-shell{align-items:flex-end;padding:0}
+  .login-modal,.account-modal,.account-center,.account-service-center,.movie-form-modal,.genre-form-modal,.invoice-detail-modal,.plan-editor{width:100%;max-width:none;max-height:calc(100dvh - env(safe-area-inset-top));border-radius:18px 18px 0 0}
+  .account-service-center{height:calc(100dvh - env(safe-area-inset-top));display:flex;flex-direction:column}
+  .account-service-center>header{flex:none;padding:18px 18px 14px}
+  .account-service-center>header h2{font-size:clamp(21px,6vw,28px);padding-right:40px}
+  .account-service-layout{height:auto;min-height:0;flex:1;grid-template-rows:auto minmax(0,1fr)}
+  .account-tabs--vertical{gap:6px;padding:10px;scroll-snap-type:x proximity}
+  .account-tabs--vertical button{min-height:44px;scroll-snap-align:start}
+  .account-service-content{min-height:0;padding:18px 16px calc(20px + env(safe-area-inset-bottom))}
+  .notification-item{padding:13px}
+  .session-list article{align-items:flex-start;flex-wrap:wrap}
+  .session-list article>button{margin-left:29px}
+  .profile-create input,.profile-create button{width:100%}
+  .admin-panel{padding:16px}
+  .catalog-manager .admin-panel__heading,.system-settings>.admin-panel__heading,.report-detail-panel .admin-panel__heading{padding:16px}
+  .billing-plan-grid{padding:0 16px 16px}
+  .billing-row{min-width:680px}
+}
+
+@media(max-width:600px){
+  body{min-width:0}
+  .topbar{display:flex;gap:8px;padding:10px max(10px,env(safe-area-inset-right)) 10px max(10px,env(safe-area-inset-left));background:rgba(8,8,12,.94)}
+  .brand{flex:none}
+  .topbar__actions{min-width:0;flex:1;gap:6px}
+  .search-box{width:auto;min-width:0;flex:1;padding:9px 10px}
+  .search-box:focus-within{position:static;width:auto;background:#18181f}
+  .search-box input{display:block;width:100%}
+  .topbar__actions>.icon-button{display:none}
+  .topbar__actions>.theme-toggle{display:grid}
+  .profile-button{flex:none;padding:5px}
+  .profile-button svg{display:none}
+  .secondary-button{min-height:42px;padding-inline:12px;white-space:nowrap}
+  .search-popover{top:66px;right:10px;left:10px;width:auto;max-height:calc(100dvh - 82px);overflow:auto}
+  .error-banner{top:70px;align-items:flex-start;gap:10px;font-size:13px}
+  .hero{min-height:70svh;padding-top:100px;padding-bottom:52px;background-position:66% center}
+  .hero h1{font-size:clamp(2.25rem,12vw,3.25rem);line-height:1}
+  .hero .button-row>*{flex:1;justify-content:center;min-height:46px}
+  .facts{gap:6px;margin-block:14px 18px}
+  .facts span{padding:6px 8px;font-size:11px}
+  .profile-band{min-height:0}
+  .profile-list{flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px}
+  .profile-chip{flex:none}
+  .discovery-bar{gap:16px}
+  .movie-row{padding-inline:14px}
+  .movie-strip{margin-inline:-14px;padding-inline:14px;scroll-padding-inline:14px}
+  .catalog-results .movie-strip{grid-template-columns:repeat(2,minmax(0,1fr));margin-inline:0;padding-inline:0;gap:18px 10px}
+  .catalog-results .movie-card__body{padding-inline:2px}
+  .site-footer{padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+  .site-footer__grid{gap:28px 18px}
+  .admin-environment-ribbon{overflow:hidden;padding-right:10px;white-space:nowrap;text-overflow:ellipsis}
+  .admin-sidebar{top:28px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .admin-sidebar__brand>span{width:34px;height:34px}
+  .admin-sidebar nav button{min-height:42px;padding:9px 11px}
+  .admin-main{padding:20px 10px calc(48px + env(safe-area-inset-bottom))}
+  .admin-page-header{gap:14px;margin-bottom:20px}
+  .admin-page-header h1{font-size:30px}
+  .admin-page-header>.primary-button{width:100%;justify-content:center}
+  .admin-kpis,.admin-workspace .review-admin-summary{grid-template-columns:1fr}
+  .admin-user-filters,.admin-review-toolbar{width:100%;display:grid;grid-template-columns:1fr}
+  .admin-user-filters select,.admin-review-toolbar select{width:100%}
+  .admin-pagination{gap:8px;justify-content:space-between;padding:14px 10px}
+  .review-bulk-bar{align-items:stretch;flex-wrap:wrap;padding:10px}
+  .review-bulk-bar strong{width:100%}
+  .movie-form-modal,.genre-form-modal,.invoice-detail-modal{padding:18px 14px calc(18px + env(safe-area-inset-bottom))}
+  .plan-editor>footer{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+}
+
+@media(max-width:390px){
+  .topbar__actions>.theme-toggle{display:none}
+  .catalog-results .movie-strip{grid-template-columns:1fr}
+  .site-footer__grid{grid-template-columns:1fr}
+  .episode-library .episode-grid{grid-template-columns:repeat(3,1fr)}
+}
+
+@media(max-height:520px) and (orientation:landscape){
+  .hero{min-height:520px}
+  .modal-shell{align-items:stretch}
+  .login-modal,.account-service-center,.movie-form-modal,.genre-form-modal,.invoice-detail-modal,.plan-editor{height:100dvh;max-height:100dvh;border-radius:0}
+  .account-service-center>header{padding-block:10px}
+}
+
+@media(pointer:coarse){
+  button,.icon-button,.admin-row-actions button{min-height:44px}
+  .icon-button{min-width:44px}
+  .movie-card,.profile-chip{-webkit-tap-highlight-color:transparent}
+}
