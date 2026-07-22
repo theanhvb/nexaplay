@@ -9,4 +9,3 @@ WorkingDirectory=/opt/nexaplay
 ExecStart=/opt/nexaplay/deploy/auto-deploy.sh
 TimeoutStartSec=30min
 Nice=10
-

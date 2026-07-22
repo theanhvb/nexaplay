@@ -27,4 +27,3 @@ echo "Phát hiện phiên bản mới: $REMOTE_COMMIT"
 ./deploy/deploy.sh
 printf '%s\n' "$REMOTE_COMMIT" > "$STATE_FILE"
 echo "Auto deploy thành công: $REMOTE_COMMIT"
-

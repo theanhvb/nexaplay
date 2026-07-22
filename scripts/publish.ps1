@@ -27,4 +27,3 @@ git push origin main
 if ($LASTEXITCODE -ne 0) { throw "Không thể push lên GitHub." }
 
 Write-Host "Đã push. VPS sẽ tự deploy trong tối đa khoảng 2 phút."
-
