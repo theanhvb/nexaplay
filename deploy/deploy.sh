@@ -33,7 +33,7 @@ set +a
 
 mkdir -p backups
 git pull --ff-only origin main
-docker compose --env-file .env -f docker-compose.prod.yml build
+docker compose --parallel 1 --env-file .env -f docker-compose.prod.yml build
 docker compose --env-file .env -f docker-compose.prod.yml up -d --remove-orphans
 docker image prune -f
 
