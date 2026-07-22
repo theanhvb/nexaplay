@@ -8,6 +8,8 @@ import { adminGenresRouter } from "./admin-genres.routes.js";
 
 const app=express(), pool=createPool("catalog_db");
 app.use(express.json({limit:"2mb"})); app.get("/health",health("catalog-service",pool));
+let ophimRequestQueue:Promise<void>=Promise.resolve();
+app.use("/v1/ophim",(_req,res,next)=>{const wait=ophimRequestQueue;let release:()=>void=()=>{};ophimRequestQueue=new Promise<void>(resolve=>{release=resolve});void wait.then(()=>{let done=false;const unlock=()=>{if(done)return;done=true;release()};res.once("finish",unlock);res.once("close",unlock);next()})});
 const OPHIM_BASE=(process.env.OPHIM_API_URL??"https://ophim1.com/v1/api").replace(/\/$/,"");
 const OPHIM_CDN="https://img.ophim.live/uploads/movies";
 const genreSeed=[['hanh-dong','Hành Động'],['tinh-cam','Tình Cảm'],['hai-huoc','Hài Hước'],['co-trang','Cổ Trang'],['tam-ly','Tâm Lý'],['hinh-su','Hình Sự'],['chien-tranh','Chiến Tranh'],['the-thao','Thể Thao'],['vo-thuat','Võ Thuật'],['vien-tuong','Viễn Tưởng'],['phieu-luu','Phiêu Lưu'],['khoa-hoc','Khoa Học'],['kinh-di','Kinh Dị'],['am-nhac','Âm Nhạc'],['than-thoai','Thần Thoại'],['tai-lieu','Tài Liệu'],['gia-dinh','Gia Đình'],['chinh-kich','Chính Kịch'],['bi-an','Bí Ẩn']];
